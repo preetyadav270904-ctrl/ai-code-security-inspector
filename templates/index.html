@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Inspector | DevSecOps Reviewer</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --card-bg: #161b22;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --text-muted: #8b949e;
+            --accent: #238636;
+            --accent-hover: #2ea043;
+            --critical: #f85149;
+            --high: #d29922;
+            --medium: #db6d28;
+            --low: #58a6ff;
+            --font-mono: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font-sans);
+            line-height: 1.5;
+            padding: 24px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .brand h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        .meta-tag {
+            font-size: 0.75rem;
+            background-color: #21262d;
+            padding: 2px 8px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1.1fr;
+            gap: 24px;
+            height: calc(100vh - 120px);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #161b22;
+        }
+
+        .editor-wrapper {
+            position: relative;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        textarea {
+            flex: 1;
+            width: 100%;
+            background: #090d13;
+            color: #e6edf3;
+            font-family: var(--font-mono);
+            font-size: 0.875rem;
+            padding: 16px;
+            border: none;
+            outline: none;
+            resize: none;
+            line-height: 1.45;
+        }
+
+        .action-bar {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            background: var(--card-bg);
+            align-items: center;
+        }
+        button.primary-btn {
+            background: var(--accent);
+            color: #fff;
+            border: 1px solid rgba(240, 246, 252, 0.1);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        button.primary-btn:hover {
+            background: var(--accent-hover);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .file-input-label {
+            font-size: 0.8125rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            border: 1px dashed var(--border);
+            padding: 6px 12px;
+            border-radius: 6px;
+        }
+        .file-input-label:hover {
+            color: var(--text);
+            border-color: var(--text-muted);
+        }
+
+        /* Results pane */
+        .results-view {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .stat-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        .stat-box {
+            background: #21262d;
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-box .count {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+        .stat-box .lbl {
+            font-size: 0.6875rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+
+        .finding-card {
+            border: 1px solid var(--border);
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .finding-card.critical { border-left: 4px solid var(--critical); }
+        .finding-card.high { border-left: 4px solid var(--high); }
+        .finding-card.medium { border-left: 4px solid var(--medium); }
+        .finding-card.low { border-left: 4px solid var(--low); }
+
+        .finding-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .finding-title {
+            font-weight: 600;
+            font-size: 0.9375rem;
+            color: #fff;
+        }
+        .badge {
+            font-size: 0.6875rem;
+            font-family: var(--font-mono);
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .badge-critical { background: rgba(248, 81, 73, 0.2); color: var(--critical); }
+        .badge-high { background: rgba(210, 153, 34, 0.2); color: var(--high); }
+        .badge-medium { background: rgba(219, 109, 40, 0.2); color: var(--medium); }
+
+        .finding-detail {
+            font-size: 0.8125rem;
+            color: var(--text);
+        }
+        .remediation-box {
+            background: #161b22;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-family: var(--font-mono);
+            font-size: 0.8125rem;
+            color: #7ee787;
+            white-space: pre-wrap;
+        }
+
+        .empty-state {
+            margin: auto;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+        .spinner {
+            display: none;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <h1>AI Security Inspector</h1>
+        <span class="meta-tag">Pipeline Edition</span>
+    </div>
+    <div style="font-size: 0.8125rem; color: var(--text-muted);">
+        Target Engine: <code style="color: #58a6ff;">openai/gpt-oss-20b (Groq)</code>
+    </div>
+</header>
+
+<div class="container">
+    <!-- Left: Code Input Pane -->
+    <div class="card">
+        <div class="card-header">
+            <span>Target Source Code</span>
+            <span id="lineCounter" style="color: var(--text-muted); font-size: 0.75rem;">1 lines</span>
+        </div>
+        <div class="editor-wrapper">
+        <textarea id="codeEditor" spellcheck="false">import os
+import sqlite3
+
+def get_user_record(db_conn, username, auth_token):
+    # SQL Injection risk
+    cursor = db_conn.cursor()
+    query = f"SELECT * FROM members WHERE user = '{username}'"
+    cursor.execute(query)
+
+    # Exposed Credential
+    DEPLOYMENT_SECRET = "sk_live_994821038592038102394"
+
+    return cursor.fetchone()
+</textarea>
+        </div>
+        <div class="action-bar">
+            <button id="scanBtn" class="primary-btn" onclick="runAnalysis()">
+                <span id="btnText">Scan Code</span>
+                <span class="spinner" id="btnSpinner"></span>
+            </button>
+
+            <label class="file-input-label">
+                Upload file...
+                <input type="file" id="fileInput" accept=".py,.js,.ts,.txt" style="display:none;" onchange="handleFileUpload(event)">
+            </label>
+        </div>
+    </div>
+
+    <!-- Right: Analysis Output Pane -->
+    <div class="card">
+        <div class="card-header">
+            <span>Inspection Findings</span>
+            <span id="statusIndicator" style="font-size: 0.75rem;">Idle</span>
+        </div>
+        <div class="results-view" id="resultsContainer">
+            <div class="empty-state" id="emptyPlaceholder">
+                Click <strong>Scan Code</strong> to inspect source for CWE / OWASP vulnerabilities and code smells.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const editor = document.getElementById('codeEditor');
+    const lineCounter = document.getElementById('lineCounter');
+
+    editor.addEventListener('input', () => {
+        const lineCount = editor.value.split('\n').length;
+        lineCounter.innerText = `${lineCount} line${lineCount !== 1 ? 's' : ''}`;
+    });
+
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            editor.value = e.target.result;
+            editor.dispatchEvent(new Event('input'));
+        };
+        reader.readAsText(file);
+    }
+
+    async function runAnalysis() {
+        const btn = document.getElementById('scanBtn');
+        const btnText = document.getElementById('btnText');
+        const btnSpinner = document.getElementById('btnSpinner');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const statusIndicator = document.getElementById('statusIndicator');
+
+        const sourceCode = editor.value.trim();
+        if (!sourceCode) {
+            alert('Please enter or paste source code to scan.');
+            return;
+        }
+
+        btn.disabled = true;
+        btnText.innerText = 'Analyzing...';
+        btnSpinner.style.display = 'inline-block';
+        statusIndicator.innerText = 'Scanning via Groq...';
+
+        try {
+            const response = await fetch('/scan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    source: sourceCode,
+                    file_name: 'inspector_input.py'
+                })
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || 'Inspection scan failed');
+            }
+
+            const data = await response.json();
+            renderFindings(data);
+            statusIndicator.innerText = data.passed ? 'Status: PASSED' : 'Status: FAILED';
+            statusIndicator.style.color = data.passed ? 'var(--accent)' : 'var(--critical)';
+
+        } catch (err) {
+            alert('Error: ' + err.message);
+            statusIndicator.innerText = 'Failed';
+        } finally {
+            btn.disabled = false;
+            btnText.innerText = 'Scan Code';
+            btnSpinner.style.display = 'none';
+        }
+    }
+
+    function renderFindings(report) {
+        const resultsContainer = document.getElementById('resultsContainer');
+        resultsContainer.innerHTML = '';
+
+        // Summary Stats
+        const statStrip = document.createElement('div');
+        statStrip.className = 'stat-strip';
+        statStrip.innerHTML = `
+        <div class="stat-box">
+          <div class="count" style="color: ${report.critical_count > 0 ? 'var(--critical)' : 'inherit'}">${report.critical_count}</div>
+          <div class="lbl">Critical</div>
+        </div>
+        <div class="stat-box">
+          <div class="count" style="color: ${report.high_count > 0 ? 'var(--high)' : 'inherit'}">${report.high_count}</div>
+          <div class="lbl">High</div>
+        </div>
+        <div class="stat-box">
+          <div class="count">${report.findings.length}</div>
+          <div class="lbl">Total Issues</div>
+        </div>
+        <div class="stat-box">
+          <div class="count">${report.total_lines}</div>
+          <div class="lbl">Lines</div>
+        </div>
+      `;
+        resultsContainer.appendChild(statStrip);
+
+        if (!report.findings || report.findings.length === 0) {
+            const cleanMsg = document.createElement('div');
+            cleanMsg.className = 'empty-state';
+            cleanMsg.innerHTML = '<span style="color: var(--accent); font-size: 1.2rem;">✓</span><br>No security risks or bugs detected.';
+            resultsContainer.appendChild(cleanMsg);
+            return;
+        }
+
+        // Render Each Finding
+        report.findings.forEach(item => {
+            const card = document.createElement('div');
+            const sevClass = (item.severity || 'info').toLowerCase();
+            card.className = `finding-card ${sevClass}`;
+
+            card.innerHTML = `
+          <div class="finding-top">
+            <span class="finding-title">${item.title}</span>
+            <span class="badge badge-${sevClass}">${item.severity}</span>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono);">
+            ${item.line ? `Line ${item.line}` : 'Global'} | ${item.cwe_or_owasp || 'General Flaw'}
+          </div>
+          <div class="finding-detail">${item.detail}</div>
+          <div class="remediation-box">${item.fix}</div>
+        `;
+            resultsContainer.appendChild(card);
+        });
+    }
+</script>
+</body>
+</html>
